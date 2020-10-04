@@ -6,6 +6,7 @@ ESX  Status HUd  is an plugin for ESX to show status bar:
 
 * Auto mode
     - [esx_status](https://github.com/esx-framework/esx_status)
+    - [esx_ambulancejob](https://github.com/esx-framework/esx_ambulancejob)
 * NodeJs
     - [node-js](https://nodejs.org/en/)
 * VueCli
