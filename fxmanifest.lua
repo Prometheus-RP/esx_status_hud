@@ -10,6 +10,7 @@ server_script 'server/main.lua'
 client_scripts {
 	'@es_extended/locale.lua',
 	'locales/br.lua',
+	'locales/en.lua',
 	'client/main.lua',
 }
 
@@ -24,5 +25,5 @@ shared_script 'config.lua'
 dependencies {
 	'es_extended',
 	'esx_status',
-	'esx_ambulancejob',
+	'esx_basicneeds',
 }

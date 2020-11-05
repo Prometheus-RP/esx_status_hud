@@ -1,3 +1,6 @@
+local thirst = nil
+local hunger = nil
+
 Citizen.CreateThread(function()
     while ESX == nil do
         TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
@@ -21,44 +24,42 @@ function getHunger()
     return hunger
 end
 
-Citizen.CreateThread(function()
-    while true do
-        Citizen.Wait(Config.UpdateHudInterval)
-
-        local thirst = getThirst()
-        local hunger = getHunger()
-
-        SendNUIMessage({
-            thirst = thirst,
-            hunger = hunger
-        })        
-    end 
-end)
-
-RegisterNetEvent('esx_status_hud:load')
-AddEventHandler('esx_status_hud:load', function (name, args)
-    local ped = PlayerPedId()
-    local pedLife = (((GetEntityHealth(ped) - 100) / (GetEntityMaxHealth(ped) - 100)) * 100)
-    local pedArmor = GetPedArmour(GetPlayerPed(-1))
-
-    if pedLife > 1 then
-        SendNUIMessage({
-            bulletproof = pedArmor,
-            life = pedLife
-        })
-    end
+AddEventHandler('esx_status:loaded', function(status)
+    
+    Citizen.CreateThread(function()
+        local ped = PlayerPedId()
+        while true do
+            Citizen.Wait(1000)
+            
+            local pedLife = (((GetEntityHealth(ped) - 100) / (GetEntityMaxHealth(ped) - 100)) * 100)
+		    local pedArmor = GetPedArmour(GetPlayerPed(-1))
+            
+            thirst = getThirst()
+            hunger = getHunger()
+            
+            SendNUIMessage({
+                life = pedLife,
+                thirst = thirst,
+                hunger = hunger,
+                playerDead = pedLife < 1,
+                showPersonHud = true,
+            })
+        end
+    end)
 end)
 
 AddEventHandler('gameEventTriggered', function (name, args)
     local ped = PlayerPedId()
-    
+
     -- args[1] = Ped que recebeu o dano
-    if name ==  'CEventNetworkEntityDamage' and args[1] == ped then
+    if name == 'CEventNetworkEntityDamage' and args[1] == ped then
 		local pedLife = (((GetEntityHealth(ped) - 100) / (GetEntityMaxHealth(ped) - 100)) * 100)
 		local pedArmor = GetPedArmour(GetPlayerPed(-1))
 
 		if pedLife > 1 then
             SendNUIMessage({
+                playerDead = false,
+                showPersonHud = true,
 				bulletproof = pedArmor,
                 life = math.ceil(pedLife)
 			})
@@ -66,22 +67,23 @@ AddEventHandler('gameEventTriggered', function (name, args)
 	end
 end)
 
-AddEventHandler('esx:onPlayerDeath', function(data)
-    SendNUIMessage({
-        playerDead = true
-    })
-end)
-
 AddEventHandler('playerSpawned', function(spawn)
     local ped = PlayerPedId()
     local pedLife = (((GetEntityHealth(ped) - 100) / (GetEntityMaxHealth(ped) - 100)) * 100)
     local pedArmor = GetPedArmour(GetPlayerPed(-1))
 
+    
+    thirst = getThirst()
+    hunger = getHunger()
+
     if pedLife > 1 then
         SendNUIMessage({
             bulletproof = pedArmor,
             life = pedLife,
-            playerDead = false
+            thirst = thirst,
+            hunger = hunger,
+            playerDead = false,
+            showPersonHud = true,
         })
     end
 end)
@@ -91,18 +93,46 @@ AddEventHandler('onClientResourceStart', function (resourceName)
     if(GetCurrentResourceName() ~= resourceName) then
       return
     end
+end)
 
-    local ped = PlayerPedId()
-    local pedLife = (((GetEntityHealth(ped) - 100) / (GetEntityMaxHealth(ped) - 100)) * 100)
-    local pedArmor = GetPedArmour(GetPlayerPed(-1))
-    
-    if pedLife > 1 then
-        SendNUIMessage({
-            bulletproof = pedArmor,
-            life = pedLife,
-            res = resourceName,
-            playerDead = false
-        })
+
+RegisterNUICallback('esx_status_hud:loadInterface', function(data, cb)
+
+	if data.loaded == true then
+        local ped = PlayerPedId()
+        local pedLife = (((GetEntityHealth(ped) - 100) / (GetEntityMaxHealth(ped) - 100)) * 100)
+
+        thirst = getThirst()
+        hunger = getHunger()
+
+        if pedLife > 1 then
+            cb({
+                labels = {
+                    life = _U('life'),
+                    armor = _U('armor'),
+                    hunger = _U('hunger'),
+                    thirst = _U('thirst')
+                },
+                hudSize = Config.HudSize,
+                barWeight = Config.BarWeight,
+                bulletproof = pedArmor,
+                life = pedLife,
+                thirst = thirst,
+                hunger = hunger,
+                playerDead = false,
+                showPersonHud = true,
+            })
+        else
+            cb({
+                playerDead = true,
+            })
+        end
     end
-  end)
-  
+end)
+
+
+AddEventHandler('esx:onPlayerDeath', function(data)
+    SendNUIMessage({
+        playerDead = true
+    })
+end)
